@@ -1,0 +1,83 @@
+loadi(4,17);//timer interpt load in mem page 4 and 5
+loadi(5,18);
+loadi(65,7);//the blocks 7-8 from disk is to be loaded to the memory pages
+loadi(66,8);
+loadi(63,13);//load library code from disk to memory
+loadi(64,14);
+loadi(22,35);//INT10 module from disk to memory
+loadi(23,36);
+loadi(2, 15);//exception handler routine from disk to memory
+loadi(3, 16);
+PTBR = PAGE_TABLE_BASE;
+PTLR = 10;
+//library
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+//Heap
+[PTBR+4] = 78;
+[PTBR+5] = "0110";
+[PTBR+6] = 79;
+[PTBR+7] = "0110";
+
+//Code
+[PTBR+8] = 65;
+[PTBR+9] = "0100";
+[PTBR+10] = 66;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//Stack
+[PTBR+16] = 76;
+[PTBR+17] = "0110";
+[PTBR+18] = 77;
+[PTBR+19] = "0110";
+
+//This is the address of the first instruction to be executed when the program is run. Hence, you must initialise IP to the second word in the header. Since the first code page is loaded into memory page 65, the address of the second word in header is calculated as (65 * 512) + 1. This value is stored to the top of the user stack. The machine on executing IRET instructions pops this value from the stack and sets IP to that value. 
+[76*512]=[65*512+1];
+SP=8*512;\
+
+
+
+//stage 9
+[PROCESS_TABLE+11]=80;//ince the first available free page is 80, the User Area page is allocated at the physical page number 80.
+
+[PROCESS_TABLE+1]=0;//SET PID = 0  AS WE ARE USING FIRST PROCESS.
+
+[SYSTEM_STATUS_TABLE+1]=0;//The second field of this table must be set to the PID of the process which is going to be run in user mode. 
+
+//TIMER INTERRUPT
+//save the current value of SP into corresponding Process Table entry.
+[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+13]=SP;
+
+//Set the SP to the beginning of the kernal stack= uAreaPageNo *512-1
+SP=[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+11]*512-1;
+   
+//save the user context to the kernal stack using Backup instuction 
+backup;
+
+//print "TIMER";
+print "PID=";
+print ([SYSTEM_STATUS_TABLE+1]);
+
+//Restore the user context from the Kernal stack and set SP to the user SP
+//saved in process table,before returning to user mode.
+
+restore; 
+SP=[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+13];
+
+
+
+
+
+//The OS Startup Code transfers control of execution to the user program using an IRET instruction. An IRET performs the following operations
+
+  //  The privilege mode is changed from KERNEL to USER mode.
+ //   The instruction pointer is set to the value at the top of the user stack
+//    The value of SP is decremented by 1
+
+ireturn;
