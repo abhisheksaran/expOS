@@ -1,0 +1,39 @@
+BRKP
+POP R1			//pop ip+2
+POP R2			//pop ret val
+POP R3			//pop arg3 then arg2, at last arg1
+POP R4			
+POP R5
+POP R6			//pop sys call
+MOV R7, "Write"		//move sys call name to another register
+EQ R7,R6		//compare to see if sys call is write 
+JZ R7,62 		//if no then jump to inst 63
+MOV R6, 5		//else move syscall number 5 to corrresponding register	
+PUSH R1			//push ip+2 at bottom
+PUSH R6			//push syscall and arguments
+PUSH R5			
+PUSH R4
+PUSH R3
+PUSH R2			//push reg which will store return value
+INT 7			//call interrupt routine
+POP R2			//came back from return, pop all values to put ip+2 on top again
+POP R3			
+POP R4
+POP R5
+POP R6
+POP R1			//pop ip+2
+PUSH R6			//push syscall
+PUSH R5			//arguments
+PUSH R4
+PUSH R3
+PUSH R2			//push return value
+PUSH R1			//push ip+2 at top as it was intially
+RET
+MOV R2,-1		//if syscall is not write, move -1 to ret register r2
+PUSH R6			//push syscall, arguments, ret register and ip+2
+PUSH R5
+PUSH R4
+PUSH R3
+PUSH R2
+PUSH R1
+RET
