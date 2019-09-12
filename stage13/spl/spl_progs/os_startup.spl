@@ -1,0 +1,79 @@
+
+loadi(69,11);//load idle program to memory page 69 and 70-stage 12
+loadi(70,12);
+loadi(54,67);//load boot_module 7 from disk blocks 67 and 68 to memeory pages 54 and 55
+loadi(55,68);
+
+
+SP=82*512-1;//user area page number for idle process=82
+
+call BOOT_MODULE;//call module 7 using call statement in SPL
+
+
+
+//setting page table entries for idle process -stage 12
+PTBR = PAGE_TABLE_BASE;
+PTLR = 10;
+//library
+[PTBR+0] = -1;
+[PTBR+1] = "0000";
+[PTBR+2] = -1;
+[PTBR+3] = "0000";
+//Heap
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+
+//Code
+[PTBR+8] = 69;
+[PTBR+9] = "0100";
+[PTBR+10] = 70;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//Stack
+[PTBR+16] = 81;
+[PTBR+17] = "0110";
+[PTBR+18] = -1;
+[PTBR+19] = "0000";
+
+[PROCESS_TABLE+11]=82;//the User Area page for idle process is allocated at the physical page number 82.
+
+[PROCESS_TABLE+12]=0;//The KPTR field must store the offset of the kernel stack pointer within this user area page. 
+
+[PROCESS_TABLE+13]=8*512;//logical address of userSP,The UPTR points to the top of the current value of user stack pointer.
+
+[PROCESS_TABLE+1]=0;//SET PID = 0 always for idle process by default.
+
+[PROCESS_TABLE+4]=RUNNING;// idle process is scheduled first
+
+[PROCESS_TABLE+14]=PAGE_TABLE_BASE;//Set the PTBR field to PAGE_TABLE_BASE and PTLR field to 10 in the Process Table entry of idle process.
+[PROCESS_TABLE+15]=10;
+
+[81*512]=[69*512+1];//set the entry point IP value from the header of idle process to top of the user stack of thr ideal process as done in privious stage(Stage 11)
+
+//Also set the SP register accordingly.
+SP=8*512;
+
+//Set the current PID field in system status table to 1, as PID for INIT is 1.
+[SYSTEM_STATUS_TABLE+1]=0;//The second field of this table must be set to the PID of the process which is going to be run in user mode which is idle proces in stage 13.
+
+
+
+
+
+
+
+
+
+//The OS Startup Code transfers control of execution to the user program using an IRET instruction. An IRET performs the following operations
+
+  //  The privilege mode is changed from KERNEL to USER mode.
+ //   The instruction pointer is set to the value at the top of the user stack
+//    The value of SP is decremented by 1
+
+ireturn;
