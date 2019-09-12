@@ -1,0 +1,137 @@
+//assignment 1, linking library to address space of idle program
+loadi(4,17);//timer interpt load in mem page 4 and 5
+loadi(5,18);
+loadi(65,7);//the blocks 7-8 from disk is to be loaded to the memory pages
+loadi(66,8);
+loadi(63,13);//load library code from disk to memory
+loadi(64,14);
+loadi(22,35);//INT10 module from disk to memory
+loadi(23,36);
+loadi(2, 15);//exception handler routine from disk to memory
+loadi(3, 16);
+loadi(16,29);//load INT 7 from disk to memory - stage 10.
+loadi(17,30);
+loadi(69,11);//load idle program to memory page 69 and 70-stage 12
+loadi(70,12);
+
+
+
+
+
+//setting page table entries for idle process -stage 12
+PTBR = PAGE_TABLE_BASE;
+PTLR = 10;
+//library
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+//Heap
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+
+//Code
+[PTBR+8] = 69;
+[PTBR+9] = "0100";
+[PTBR+10] = 70;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//Stack
+[PTBR+16] = 81;
+[PTBR+17] = "0110";
+[PTBR+18] = -1;
+[PTBR+19] = "0000";
+
+[PROCESS_TABLE+11]=82;//the User Area page for idle process is allocated at the physical page number 82.
+
+[PROCESS_TABLE+12]=0;//The KPTR field must store the offset of the kernel stack pointer within this user area page. 
+
+[PROCESS_TABLE+13]=8*512;//logical address of userSP,The UPTR points to the top of the current value of user stack pointer.
+
+[PROCESS_TABLE+1]=0;//SET PID = 0 always for idle process by default.
+
+[PROCESS_TABLE+4]=CREATED;// idle process,CREATE state indicates that the process had neverbeen scheduled for execution previously. Subsquent "resheduling" will be done by the timer interrupt handler.
+
+[PROCESS_TABLE+14]=PAGE_TABLE_BASE;//Set the PTBR field to PAGE_TABLE_BASE and PTLR field to 10 in the Process Table entry of idle process.
+[PROCESS_TABLE+15]=10;
+
+[81*512]=[69*512+1];//set the entry point IP value from the header of idle process to top of the user stack of thr ideal process as done in privious stage(Stage 11)
+
+
+
+
+
+//setting page table entries for init process
+PTBR = PAGE_TABLE_BASE+20; //modification in stage 12
+PTLR = 10;
+
+//library
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+//Heap
+[PTBR+4] = 78;
+[PTBR+5] = "0110";
+[PTBR+6] = 79;
+[PTBR+7] = "0110";
+
+//Code
+[PTBR+8] = 65;
+[PTBR+9] = "0100";
+[PTBR+10] = 66;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//Stack
+[PTBR+16] = 76;
+[PTBR+17] = "0110";
+[PTBR+18] = 77;
+[PTBR+19] = "0110";
+
+//stage 9 ,Set User Area Page number, UPTR, KPTR, PTBR and PTLR fields in the Process Table entry for init.
+[PROCESS_TABLE+16+11]=80;//ince the first available free page is 80, the User Area page for init process is allocated at the physical page number 80.
+
+[PROCESS_TABLE+16+12]=0;//The KPTR field must store the offset of the kernel stack pointer within this user area page. 
+
+[PROCESS_TABLE+16+13]=8*512;//logical address of userSP,The UPTR points to the top of the current value of user stack pointer.
+
+[PROCESS_TABLE+16]=1;//SET PID = 1 for init process AS it's second PROCESS.
+
+[PROCESS_TABLE+16+4]=RUNNING;//init proces, the process being currently scheduled is said to be in RUNNING state.
+
+[PROCESS_TABLE+16+14]=PAGE_TABLE_BASE+20;//Set the PTBR field to PAGE_TABLE_BASE+20 and PTLR field to 10 in the Process Table entry of idle process.
+
+[PROCESS_TABLE+16+15]=10;
+
+
+//(This is the address of the first instruction to be executed when the program is run. Hence, you must initialise IP to the second word in the header. Since the first code page is loaded into memory page 65, the address of the second word in header is calculated as (65 * 512) + 1. This value is stored to the top of the user stack. The machine on executing IRET instructions pops this value from the stack and sets IP to that value. )
+//Set the Entry point address for INIT process in the beginning of Stack page of INIT. 
+[76*512]=[65*512+1];
+
+//Also set the SP register accordingly.
+SP=8*512;
+
+//Set the current PID field in system status table to 1, as PID for INIT is 1.
+[SYSTEM_STATUS_TABLE+1]=1;//The second field of this table must be set to the PID of the process which is going to be run in user mode.
+
+
+
+
+
+//The OS Startup Code transfers control of execution to the user program using an IRET instruction. An IRET performs the following operations
+
+  //  The privilege mode is changed from KERNEL to USER mode.
+ //   The instruction pointer is set to the value at the top of the user stack
+//    The value of SP is decremented by 1
+
+ireturn;
