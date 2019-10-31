@@ -1,0 +1,45 @@
+decl 
+	int isPrime(int x);
+enddecl
+
+int isPrime(int x){
+decl
+	int counter;
+	int temp;
+enddecl
+
+begin 
+	temp=1;
+	counter=2;
+	while(counter<=(x/2)) do
+		if((x%counter)==0) then 
+			temp=0;
+			break;
+		endif;
+		counter=counter+1;
+	endwhile;
+	
+	return temp;
+end
+}
+
+
+
+
+int main()
+{
+decl  
+	int a;
+enddecl
+
+begin 
+	a=2;
+	while(a<=100) do
+		if(isPrime(a)==1) then 
+			write(a);
+		endif;
+		a=a+1;
+	endwhile;
+	return 0;
+end
+}

@@ -1,0 +1,43 @@
+//breakpoint;
+alias funcNum R1;
+alias returnVal R0;
+if(funcNum ==1)//get free page  
+then
+	alias currentPID R2;
+	[SYSTEM_STATUS_TABLE+3]=[SYSTEM_STATUS_TABLE+3]+1;
+	while([SYSTEM_STATUS_TABLE+2]==0) do
+		[PROCESS_TABLE+currentPID*16+4]=WAIT_MEM;
+		multipush(R1,R2);
+		call MOD_5;
+		multipop(R1,R2);
+	endwhile;
+	[SYSTEM_STATUS_TABLE+3]=[SYSTEM_STATUS_TABLE+3]-1;
+	[SYSTEM_STATUS_TABLE+2]=[SYSTEM_STATUS_TABLE+2]-1;
+	alias counter R3;
+	counter =76;
+	while([MEMORY_FREE_LIST+counter]==1) do
+		counter=counter+1;
+	endwhile;
+	[MEMORY_FREE_LIST+counter]=1;
+	returnVal=counter;
+//	breakpoint;
+	return ;
+endif;
+if(funcNum ==2) //release page 
+then
+	alias pageNo R2;
+	[MEMORY_FREE_LIST+pageNo]=[MEMORY_FREE_LIST+pageNo]-1;
+	if([MEMORY_FREE_LIST+pageNo]==0) then 
+		[SYSTEM_STATUS_TABLE+2]=[SYSTEM_STATUS_TABLE+2]+1;
+	endif;
+	alias counter R3;
+	counter=0;
+	while(counter<MAX_PROC_NUM) do
+		if([PROCESS_TABLE+counter*16+4]==WAIT_MEM) then
+			[PROCESS_TABLE+counter*16+4]= READY;
+		endif;
+		counter=counter +1;
+	endwhile;
+//	breakpoint;
+	return ;
+endif;

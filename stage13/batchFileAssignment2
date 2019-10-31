@@ -1,8 +1,0 @@
-load --os ../spl/spl_progs/os_startup_assignment1.xsm
-load --library ../expl/library.lib
-load --exhandler ../spl/spl_progs/haltprog.xsm
-load --init ../expl/samples/numbers.xsm
-load --int=7 ../spl/spl_progs/sample_int7.xsm
-load --int=10 ../spl/spl_progs/haltprog.xsm
-load --idle ../expl/samples/assignment1.xsm
-load --int=timer ../spl/spl_progs/sample_timer_assignment2.xsm

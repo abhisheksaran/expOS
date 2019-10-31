@@ -39,7 +39,7 @@ PTLR = 10;
 
 //This is the address of the first instruction to be executed when the program is run. Hence, you must initialise IP to the second word in the header. Since the first code page is loaded into memory page 65, the address of the second word in header is calculated as (65 * 512) + 1. This value is stored to the top of the user stack. The machine on executing IRET instructions pops this value from the stack and sets IP to that value. 
 [76*512]=[65*512+1];
-SP=8*512;\
+SP=8*512;
 
 
 

@@ -1,0 +1,22 @@
+
+alias current_PID R0;
+current_PID= [SYSTEM_STATUS_TABLE+1];
+[PROCESS_TABLE+current_PID*16+4]=TERMINATED;
+
+alias counter R1;
+counter=1;
+while(counter< MAX_PROC_NUM) do
+	if([PROCESS_TABLE+counter*16+4]!=TERMINATED)  then
+		break;
+	endif;
+	counter=counter+1;
+endwhile;
+
+if(counter==MAX_PROC_NUM) then
+	halt;
+else
+	call MOD_5; //scheduler  module
+endif;
+
+
+
