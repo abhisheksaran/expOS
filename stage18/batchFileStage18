@@ -17,5 +17,5 @@ load --int=6 ../spl/spl_progs/sample_int6.xsm
 load --int=9 ../spl/spl_progs/sample_int9_execSysCall.xsm
 load --module 1 ../spl/spl_progs/processManager_module1.xsm
 load --module 2 ../spl/spl_progs/memoryManager_module2.xsm
-load --int=disk ../spl/spl_progs/sample_int2_diskController.xsm
+load --int=disk ../spl/spl_progs/disk_interrupt.xsm
 exit

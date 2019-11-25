@@ -1,0 +1,159 @@
+breakpoint;
+alias parentPID R6;
+alias childPID R5;
+alias freePage R7;
+parentPID= [SYSTEM_STATUS_TABLE+1];
+//breakpoint;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+9]=8;//set the mode flag to syscall no
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;//switch to kernal stack of parent process
+
+//get pcb entry
+multipush(R6);
+alias funcNum R1;
+R1=1;
+call MOD_1 ;//call func get_pcb_entry in process manager moudle 1
+R5=R0;
+multipop(R6);
+
+if(childPID==-1) then 
+	//multipush(R5); mistake
+	alias phyAddRetVal R3;
+	phyAddRetVal = ([PTBR + 2 * (([PROCESS_TABLE + ( parentPID* 16) + 13] - 1) / 512)] * 512) + (([PROCESS_TABLE + ( parentPID* 16) + 13] - 1) % 512);
+	phyAddRetVal =-1;
+	[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+9]=0;//reset the mode flag
+	SP=[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+13];//switch to user stack
+	ireturn;
+endif;
+//breakpoint;
+//allocate heap pages for parent process
+PTBR=[PAGE_TABLE_BASE + 20*parentPID];
+if([PTBR+4]==-1) then
+	multipush(R5,R6);
+	R1=1;
+	call MOD_2;//get free page in memory manager 
+	R7=R0;
+	multipop(R5,R6);
+	[PTBR+4]=freePage;
+	[PTBR+5]="0110";
+endif;
+
+if([PTBR+6]==-1) then
+	multipush(R5,R6);
+	R1=1;
+	call MOD_2;//get free page in memory manager 
+	R7=R0;
+	multipop(R5,R6);
+	[PTBR+6]=freePage;
+	[PTBR+7]="0110";
+endif;
+
+//allocate stack and user area page for child process
+alias ptbr R4;
+ptbr=[PAGE_TABLE_BASE+20*childPID];
+
+	multipush(R5,R6);
+	R1=1;
+	call MOD_2;//get free page in memory manager 
+	R7=R0;
+	multipop(R5,R6);
+	[ptbr+16]=freePage;
+	[ptbr+17]="0110";
+
+
+	//allocate stack page for parent process
+	multipush(R5,R6);
+	R1=1;
+	call MOD_2;//get free page in memory manager 
+	R7=R0;
+	multipop(R5,R6);
+	[ptbr+18]=freePage;
+	[ptbr+19]="0110";
+
+
+//allocate user area page for childProcess
+multipush(R5,R6);
+R1=1;
+call MOD_2;//get free page in memory manager 
+R7=R0;
+multipop(R5,R6);
+[PROCESS_TABLE+childPID*16+11]=freePage;
+
+//initialization of the process_table_entries
+[PROCESS_TABLE+childPID*16+3]=[PROCESS_TABLE+parentPID*16+3];
+[PROCESS_TABLE+childPID*16+6]=[PROCESS_TABLE+parentPID*16+6];
+[PROCESS_TABLE+childPID*16+10]=[PROCESS_TABLE+parentPID*16+10];
+[PROCESS_TABLE+childPID*16+13]=[PROCESS_TABLE+parentPID*16+13];
+[PROCESS_TABLE+childPID*16+7]=[PROCESS_TABLE+parentPID*16+7];
+[PROCESS_TABLE+childPID*16+0]=0;
+[PROCESS_TABLE+childPID*16+2]=parentPID;
+[PROCESS_TABLE+childPID*16+9]=0;
+[PROCESS_TABLE+childPID*16+12]=0;
+[PROCESS_TABLE+childPID*16+4]=CREATED;
+
+
+//COPY PER PROCESS RESOURCE TABLE
+
+//COPY PER PROCESS DISK MAP TABLE
+[DISK_MAP_TABLE+childPID*10+8]=[DISK_MAP_TABLE+parentPID*10+8];
+[DISK_MAP_TABLE+childPID*10+9]=[DISK_MAP_TABLE+parentPID*10+9];
+alias ptbr_child R10;
+alias ptbr_parent R11;
+ptbr_child=[PROCESS_TABLE+childPID*16+14];
+ptbr_parent=[PROCESS_TABLE+parentPID*16+14];
+
+//initialize the page table of child process
+alias cnt R2;
+cnt=0;
+while(cnt<=15) do
+	[ptbr_child+cnt]=[ptbr_parent+cnt];
+	cnt=cnt+1;
+endwhile;
+
+cnt=0;
+while(cnt<=15) do
+	if(cnt%2==0)then
+		[MEMORY_FREE_LIST+[ptbr_parent+cnt]]=[MEMORY_FREE_LIST+[ptbr_parent+cnt]]+1;
+	endif;
+	cnt=cnt+1;
+endwhile;
+	
+
+//copy content of user stack  pages of the parent to the user stack pages of the child word by word
+cnt=0;
+while(cnt<512) do
+	[[ptbr_child+16]*512+cnt]=[[ptbr_parent+16]*512+cnt];
+	cnt=cnt+1;
+
+endwhile;
+cnt=0;
+while(cnt<512) do
+	[[ptbr_child+18]*512+cnt]=[[ptbr_parent+18]*512+cnt];
+	cnt=cnt+1;
+endwhile;
+
+
+alias stack R3;
+stack = [PROCESS_TABLE +(childPID*16)+13];
+ptbr=[PAGE_TABLE_BASE+20*childPID];
+
+
+
+
+
+
+//store BP on top of kernal stack of child
+[PROCESS_TABLE + childPID*16+11]=BP;
+
+//set up return value 0 in the user stack of the child
+[[ptbr + 2 * ((stack - 1) / 512)] * 512 + ((stack - 1) % 512)] = 0;
+//set up return value child_pid  in the user stack of the parent
+stack = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13];
+[[PTBR + 2 * ((stack - 1) / 512)] * 512 + ((stack - 1) % 512)] = childPID;
+
+
+SP=[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+13];
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+9]=0;
+
+breakpoint;
+ireturn;

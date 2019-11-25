@@ -102,27 +102,13 @@ alias freePageNo R3;
 [PTBR+1] = "0100";
 [PTBR+2] = 64;
 [PTBR+3] = "0100";
-
 //breakpoint;
-multipush(R0,R1,R2);
-R1=1;
-call MOD_2;//process manager
-freePageNo=R0;
-multipop(R0,R1,R2);
-//breakpoint;	
-
 //Heap
-[PTBR+4] = freePageNo;
-[PTBR+5] = "0110";
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
 
-multipush(R0,R1,R2);
-R1=1;
-call MOD_2;//process manager
-freePageNo=R0;
-multipop(R0,R1,R2);
-	
-[PTBR+6] = freePageNo;
-[PTBR+7] = "0110";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
 
 multipush(R0,R1,R2);
 R1=1;
@@ -145,18 +131,6 @@ multipop(R0,R1,R2);
 [PTBR+18] = freePageNo;
 [PTBR+19] = "0110";
 
-alias noBlocks R5;
-alias counter R4;
-counter=0;
-
-noBlocks=0;
-while(counter<4) do
-	if([INODE_TABLE+16*inodeIndex+6+counter]!=-1) then
-		noBlocks=noBlocks+1;
-	endif;
-	counter=counter+1;
-endwhile;
-
 //Code
 [PTBR+8] = -1;
 [PTBR+9] = "0000";
@@ -167,42 +141,32 @@ endwhile;
 [PTBR+14] = -1;
 [PTBR+15] = "0000";
 
-counter=0;
-while(counter<noBlocks) do
-//call free page
-	
-	multipush(R0,R1,R2,R4);
-	alias functionNumber R1; 
-	functionNumber=1;
-	call MOD_2;//process manager
-	freePageNo=R0;
-	//breakpoint;//to find right page no or not
-	multipop(R0,R1,R2,R4);
-	[PTBR+8+2*counter]=freePageNo;
-	[PTBR+8+2*counter+1]="0100";
-	//load the code block from disk to memory, invoke the DISK LOAD function in device manager
-
-	//loadi(freePageNo,[INODE_TABLE+16*inodeIndex+8+counter]);
-	alias blockNum R6;	
-	blockNum=[INODE_TABLE+16*inodeIndex+8+counter];
-	 
-	multipush(R0,R1,R2,R4,R5);
-	R1=2;
-	R2=[SYSTEM_STATUS_TABLE+1];
-	R3=freePageNo;
-	R4=blockNum;
-	call MOD_4;
-	multipop(R0,R1,R2,R3,R4,R5);
-
-	//store the entry point  IP value to the top of user stack
-	if(counter==0) then 	
-		[[PTBR+16]]=[freePageNo*512+1];
-	endif;
-	counter=counter+1;
-endwhile;
+//get code page
+R2=[INODE_TABLE+16*inodeIndex+8];//block number;
+multipush(R0,R1,R4);
+R1=5;
 //breakpoint;
-[[PTBR+16]*512]=[[PTBR+8]*512+1];//set ip of the starting of the program to top of the user stack
-//Outside the else block, set back the value of SP to point to top of user stack. 
+call MOD_2;
+freePageNo=R0;
+multipop(R0,R1,R4);
+[PTBR+8]=freePageNo;
+[PTBR+9]="0100";
+//breakpoint;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+2]=-1;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+3]=-1;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+4]=[INODE_TABLE+16*inodeIndex+8];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+5]=[INODE_TABLE+16*inodeIndex+9];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+6]=[INODE_TABLE+16*inodeIndex+10];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+7]=[INODE_TABLE+16*inodeIndex+11];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+8]=-1;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+9]=-1;
+
+
+
+
+//store the entry point  IP value to the top of user stack
+[[PTBR+16]*512]=[freePageNo*512+1];
+
  SP = 8*512;//change sp to  user stack
 
 //Reset the MODE FLAG field in the process table to 0. Value 0 indicates that process is running in user mode. 
@@ -211,5 +175,5 @@ endwhile;
 
 
 //Pass control back to the user program using the ireturn statemente 
-//breakpoint;
+breakpoint;
 	ireturn;

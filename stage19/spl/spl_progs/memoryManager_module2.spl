@@ -20,7 +20,7 @@ then
 	endwhile;
 	[MEMORY_FREE_LIST+counter]=1;
 	returnVal=counter;
-//	breakpoint;
+	//breakpoint;
 	return ;
 endif;
 if(funcNum ==2) //release page 
@@ -41,3 +41,80 @@ then
 //	breakpoint;
 	return ;
 endif;
+if(funcNum==4)//release block
+then
+	alias blockNum R2;
+	[DISK_FREE_LIST+blockNum]=[DISK_FREE_LIST+blockNum]-1;
+	return;
+endif;
+
+if(funcNum==5) //get code page
+then
+	alias blockNo R2;
+	alias pid R4;	
+	alias pageNo R5;
+	//breakpoint;
+	pid=0;
+	while(pid<MAX_PROC_NUM) do
+		if([DISK_MAP_TABLE+pid*10+4]==blockNo) then
+			pageNo=[PAGE_TABLE_BASE+pid*20+8];
+			[MEMORY_FREE_LIST+pageNo]=[MEMORY_FREE_LIST+pageNo]+1;
+			R0=pageNo;
+			//breakpoint;
+			return;
+		endif;	
+
+		if([DISK_MAP_TABLE+pid*10+5]==blockNo) then
+			pageNo=[PAGE_TABLE_BASE+pid*20+10];
+			[MEMORY_FREE_LIST+pageNo]=[MEMORY_FREE_LIST+pageNo]+1;
+			R0=pageNo;
+			//breakpoint;
+			return;
+		endif;
+
+		if([DISK_MAP_TABLE+pid*10+6]==blockNo) then
+			pageNo=[PAGE_TABLE_BASE+pid*20+12];
+			[MEMORY_FREE_LIST+pageNo]=[MEMORY_FREE_LIST+pageNo]+1;
+			R0=pageNo;
+			//breakpoint;
+			return;
+		endif;
+
+		if([DISK_MAP_TABLE+pid*10+7]==blockNo) then
+			pageNo=[PAGE_TABLE_BASE+pid*20+14];
+			[MEMORY_FREE_LIST+pageNo]=[MEMORY_FREE_LIST+pageNo]+1;
+			R0=pageNo;
+			//breakpoint;
+			return;
+		endif;
+		
+		pid=pid+1;
+	endwhile;
+	
+	if(pid==MAX_PROC_NUM) then
+		multipush(R1,R2);
+		R1=1;
+		call MOD_2;
+		R5=R0;
+		multipop(R1,R2);
+	endif;
+	
+	R3=R5;
+	R4=R2;
+	multipush(R1,R2,R5);
+	R1=2;
+	R2=[SYSTEM_STATUS_TABLE+1];
+	//breakpoint;
+	call MOD_4;//load block to the given mem page no
+	multipop(R1,R2,R5);
+	R0=pageNo;
+	breakpoint;
+	return;
+endif;
+	
+		
+
+
+
+
+	

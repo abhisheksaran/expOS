@@ -31,6 +31,8 @@ loadi(59,3);//load  Inode Table
 loadi(60,4);
 loadi(6,19);//load disk interrupt 
 loadi(7,20);
+loadi(61,2);//load disk free list
+
 [TERMINAL_STATUS_TABLE]=0;//intially terminal is free
 [DISK_STATUS_TABLE]=0;
 [SYSTEM_STATUS_TABLE+3]=0;//wait mem count
@@ -63,27 +65,35 @@ PTLR = 10;
 //Heap
 [PTBR+4] = 78;
 [MEMORY_FREE_LIST+78]=1;
+[DISK_MAP_TABLE+10+2]=-1; //intializing disk map table
 [PTBR+5] = "0110";
 [PTBR+6] = 79;
 [MEMORY_FREE_LIST+79]=1;
+[DISK_MAP_TABLE+10+3]=-1;
 [PTBR+7] = "0110";
 
 //Code
 [PTBR+8] = 65;
 [PTBR+9] = "0100";
+[DISK_MAP_TABLE+10+4]=7;
 [PTBR+10] = 66;
 [PTBR+11] = "0100";
+[DISK_MAP_TABLE+10+5]=8;
 [PTBR+12] = -1;
 [PTBR+13] = "0000";
+[DISK_MAP_TABLE+10+6]=-1;
 [PTBR+14] = -1;
 [PTBR+15] = "0000";
+[DISK_MAP_TABLE+10+7]=-1;
 
 //Stack
 [PTBR+16] = 76;
 [MEMORY_FREE_LIST+76]=1;
+[DISK_MAP_TABLE+10+8]=-1;
 [PTBR+17] = "0110";
 [PTBR+18] = 77;
 [MEMORY_FREE_LIST+77]=1;
+[DISK_MAP_TABLE+10+9]=-1;
 [PTBR+19] = "0110";
 
 //stage 9 ,Set User Area Page number, UPTR, KPTR, PTBR and PTLR fields in the Process Table entry for init.

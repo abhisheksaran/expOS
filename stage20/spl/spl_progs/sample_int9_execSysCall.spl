@@ -1,0 +1,179 @@
+//breakpoint;
+//some problem here
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 9;
+alias userSP R0;
+userSP = SP;
+
+
+//Switch the stack from user stack to kernel stack.
+//Save the value of SP in the user SP field of Process Table entry of the process.
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+//Setting SP beginning of the kernel stack ie. to UArea Page number * 512 - 1
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+
+//First we have to access argument 1 which is file descriptor to check whether it is valid or not.
+//n user mode, logical addresses are translated to physical address by the machine using its address translation scheme. 
+// Since interrupts are executed in the kernel mode, the actual physical address is used to access memory locations. Hence to access the file descriptor (argument 1) we must calculate the physical address of the memory location where it is stored.
+//According to system call conventions, userSP - 4 is the location of the argument 1. So we will manually address translate userSP - 4 
+
+alias physicalPageNum R1;
+alias offset R2;
+alias fileNameAddr R3;
+physicalPageNum = [PTBR + 2 * ((userSP - 4)/ 512)];
+offset = (userSP - 4) % 512;
+fileNameAddr = (physicalPageNum * 512) + offset;
+alias fileName R4;
+fileName=[fileNameAddr];
+
+alias inodeIndex R1;
+inodeIndex=0;
+alias counter R2;
+counter=0;
+alias temp R14;
+//breakpoint;
+while(counter<MAX_FILE_NUM) do
+	temp= [INODE_TABLE+16*inodeIndex+1];
+	//breakpoint;
+	if([INODE_TABLE+16*inodeIndex+1]==fileName&&[INODE_TABLE+16*inodeIndex]==EXEC)
+	then 
+		break;
+	else 
+		inodeIndex=inodeIndex+1;
+	endif;
+	counter=counter+1;
+endwhile;
+alias boo R13;
+boo=[INODE_TABLE+16*inodeIndex+8];
+//breakpoint;
+
+alias physicalAddrRetVal R2;
+if(inodeIndex==MAX_FILE_NUM)
+then
+	physicalAddrRetVal = ([PTBR + 2 * (userSP - 1)/ 512] * 512) + ((userSP - 1) % 512);
+	[physicalAddrRetVal] = -1;
+	[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+	SP=userSP;
+	ireturn;
+else
+	[physicalAddrRetVal] = 0;
+endif;
+
+//breakpoint;
+
+multipush(R0,R1);
+alias functionNumber R1; 
+alias currentPID R2;
+functionNumber=3;
+currentPID=[SYSTEM_STATUS_TABLE+1];
+call MOD_1;//process manager
+multipop(R0,R1);
+alias inodeIndex R1;
+
+alias userAreaPageNo R2;
+userAreaPageNo=[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 11] ;
+[MEMORY_FREE_LIST+userAreaPageNo]=[MEMORY_FREE_LIST+userAreaPageNo]+1;
+[SYSTEM_STATUS_TABLE+2]=[SYSTEM_STATUS_TABLE+2]-1;
+
+//intialize per process resource table
+alias count R3;
+count=0;
+while(count<8) do
+	[80*512+RESOURCE_TABLE_OFFSET+2*count]=-1;
+	count=count+1;
+endwhile;
+
+
+SP = userAreaPageNo*512 - 1;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 4]=RUNNING ;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 7]=inodeIndex;
+
+
+PTBR = PAGE_TABLE_BASE+[SYSTEM_STATUS_TABLE+1]*20; 
+PTLR = 10;
+
+
+alias freePageNo R3;
+
+//library
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+//breakpoint;
+//Heap
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
+
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+
+multipush(R0,R1,R2);
+R1=1;
+call MOD_2;//process manager
+freePageNo=R0;
+multipop(R0,R1,R2);
+
+
+//Stack
+[PTBR+16] = freePageNo;
+[PTBR+17] = "0110";
+
+multipush(R0,R1,R2);
+R1=1;
+call MOD_2;//process manager
+freePageNo=R0;
+multipop(R0,R1,R2);
+
+
+[PTBR+18] = freePageNo;
+[PTBR+19] = "0110";
+
+//Code
+[PTBR+8] = -1;
+[PTBR+9] = "0000";
+[PTBR+10] = -1;
+[PTBR+11] = "0000";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//get code page
+R2=[INODE_TABLE+16*inodeIndex+8];//block number;
+multipush(R0,R1,R4);
+R1=5;
+//breakpoint;
+call MOD_2;
+freePageNo=R0;
+multipop(R0,R1,R4);
+[PTBR+8]=freePageNo;
+[PTBR+9]="0100";
+//breakpoint;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+2]=-1;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+3]=-1;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+4]=[INODE_TABLE+16*inodeIndex+8];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+5]=[INODE_TABLE+16*inodeIndex+9];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+6]=[INODE_TABLE+16*inodeIndex+10];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+7]=[INODE_TABLE+16*inodeIndex+11];//block number;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+8]=-1;
+[DISK_MAP_TABLE+10*[SYSTEM_STATUS_TABLE+1]+9]=-1;
+
+
+
+
+//store the entry point  IP value to the top of user stack
+[[PTBR+16]*512]=[freePageNo*512+1];
+
+ SP = 8*512;//change sp to  user stack
+
+//Reset the MODE FLAG field in the process table to 0. Value 0 indicates that process is running in user mode. 
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+
+
+//Pass control back to the user program using the ireturn statemente 
+breakpoint;
+	ireturn;

@@ -1,0 +1,15 @@
+
+int main()
+{
+ decl
+  string fileName;
+  int temp;
+ enddecl
+
+ begin
+  read(fileName);
+  temp=exposcall("Exec",fileName);
+  return 0;
+ end 
+} 
+

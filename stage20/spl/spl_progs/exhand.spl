@@ -1,0 +1,108 @@
+breakpoint;
+//exception handler;
+//save the current value of SP into corresponding Process Table entry.
+alias userSP R1;
+userSP=SP;
+alias currentPID R2;
+R2=[SYSTEM_STATUS_TABLE+1];
+[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+9]=-1;	
+[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+13]=userSP;	
+//Set the SP to the beginning of the kernal stack= uAreaPageNo *512-1
+SP=[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+11]*512-1;
+backup;
+
+multipush(EIP);
+
+if(EC!=0 ||userSP==PTLR*512-1)//if exception is not page fault 
+then	
+	
+	print "EC!=0,EXIT" ;	
+	multipush(R1,R2);
+	R1=3; //fun num for exit process
+	R2=[SYSTEM_STATUS_TABLE+1];
+	call MOD_1; //process manager
+	breakpoint;
+	multipop(R1,R2);
+	[currentPID*16+4]=TERMINATED; //terminate the current process and
+	call MOD_5;	// invoke the scheduler 
+	breakpoint;
+endif;
+
+PTBR=[PROCESS_TABLE+currentPID*16+14];
+if(EPN==2 || EPN==3) //heap page fault;
+then
+	multipush(R1,R2);
+	R1=1; //get free page
+	call MOD_2; //mem manager
+	multipop(R1,R2);
+	[PTBR+4]=R0;
+	[PTBR+5]="1110";
+	multipush(R1,R2);
+	R1=1; //get free page
+	call MOD_2; //mem manager
+	multipop(R1,R2);
+	[PTBR+6]=R0;
+	[PTBR+7]="1110";
+endif;
+if(EPN==4)
+then
+	R4=[DISK_MAP_TABLE+currentPID*10+4];
+	R3=R2;
+	multipush(R1,R2);
+	R1=5; //get code page
+	R2=R4;
+	call MOD_2; //mem manager
+	multipop(R1,R2);
+	[PTBR+8]=R0;
+	[PTBR+9]="1100";
+endif;	
+
+if(EPN==5)then 
+	R4=[DISK_MAP_TABLE+currentPID*10+5];
+	R3=R2;
+	multipush(R1,R2);
+	R1=5; //get code page
+	R2=R4;
+	call MOD_2; //mem manager
+	multipop(R1,R2);
+	[PTBR+10]=R0;
+	[PTBR+11]="1100";
+	
+endif;
+if(EPN==6)
+then
+	R4=[DISK_MAP_TABLE+currentPID*10+6];
+	R3=R2;
+	multipush(R1,R2);
+	R1=5; //get code page
+	R2=R4;
+	call MOD_2; //mem manager
+	multipop(R1,R2);
+	[PTBR+12]=R0;
+	[PTBR+13]="1100";
+	
+endif;
+if(EPN==7)
+then
+	R4=[DISK_MAP_TABLE+currentPID*10+7];
+	R3=R2;
+	multipush(R1,R2);
+	R1=5; //get code page
+	R2=R4;
+	call MOD_2; //mem manager
+	multipop(R1,R2);
+	[PTBR+14]=R0;
+	[PTBR+15]="1100";
+	
+endif;
+breakpoint;
+
+[PROCESS_TABLE+currentPID*16+9]=0;
+multipop(EIP);	
+restore;
+PTBR=[PROCESS_TABLE+currentPID*16+14];
+SP=userSP;
+SP=SP+1;//SP IS LOGICAL
+[[PTBR+2*(SP/512)]*512+SP%512]=EIP;//CONVERT IT TO PHYSICAL ADDRESS AND STORE EIP THERE
+
+ireturn;

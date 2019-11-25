@@ -1,0 +1,22 @@
+//breakpoint;
+//TIMER INTERRUPT
+//save the current value of SP into corresponding Process Table entry.
+[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+13]=SP;
+	
+//Set the SP to the beginning of the kernal stack= uAreaPageNo *512-1
+SP=[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+11]*512-1;
+
+backup;
+
+ //change the state of currently running process from running to ready
+[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+4]=READY;
+
+call MOD_5;//scheduler module
+
+restore;
+
+SP=[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+13];
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16+9]=0;
+
+//breakpoint;
+ireturn;

@@ -1,0 +1,13 @@
+
+alias current_PID R2;
+current_PID= [SYSTEM_STATUS_TABLE+1];
+[PROCESS_TABLE+current_PID*16+9]=10;
+
+R1=2;
+call MOD_1;//call exit process function in process manager
+
+
+call MOD_5; //scheduler  module
+
+
+

@@ -1,0 +1,88 @@
+//breakpoint;
+//Set the MODE FLAG field in the process table to the system call number which is 5 for write system call. To get the process table of current process, use the PID obtained from the system status table. MODE FLAG field in the process table is used to indicate whether the current process is executing in a system call, exception handler or user mode. 
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 5;
+
+
+// Store the value of user SP in a register as we need it for further computations.
+ 
+alias userSP R0;
+userSP = SP;
+
+
+//Switch the stack from user stack to kernel stack.
+//Save the value of SP in the user SP field of Process Table entry of the process.
+
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+
+//Setting SP beginning of the kernel stack ie. to UArea Page number * 512 - 1
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+
+//First we have to access argument 1 which is file descriptor to check whether it is valid or not.
+//n user mode, logical addresses are translated to physical address by the machine using its address translation scheme. 
+// Since interrupts are executed in the kernel mode, the actual physical address is used to access memory locations. Hence to access the file descriptor (argument 1) we must calculate the physical address of the memory location where it is stored.
+//According to system call conventions, userSP - 4 is the location of the argument 1. So we will manually address translate userSP - 4 
+
+alias physicalPageNum R1;
+alias offset R2;
+alias fileDescPhysicalAddr R3;
+physicalPageNum = [PTBR + 2 * ((userSP - 4)/ 512)];
+offset = (userSP - 4) % 512;
+fileDescPhysicalAddr = (physicalPageNum * 512) + offset;
+alias fileDescriptor R4;
+fileDescriptor=[fileDescPhysicalAddr];
+
+
+//Check whether the file descriptor obtained in above step is valid or not. In this stage it should be -2 because file descriptor for console is -2. (see details here.) Write an IF condition to check whether file descriptor is -2 or not. 
+
+//If the file descriptor is not equal to -2, store -1 as a return value. According to system call convention, return value is stored at memory location userSP -1 in the user stack. Calculate physical address of the return value corresponding to userSP - 1 using address translation mechanism. 
+
+// Calculate physical address of the argument 2 and extract the value from it , which is the word to be printed to the console. 
+
+//Write the word to the terminal using the print instruction.
+
+//Set the return value as 0 indicating success. According to system call convention, return value is stored at memory location userSP -1 in the user stack. 
+
+if (fileDescriptor != -2)
+then
+	 alias physicalAddrRetVal R5;
+	 physicalAddrRetVal = ([PTBR + 2 * ((userSP - 1) / 512)] * 512) + ((userSP - 1) % 512);
+	 [physicalAddrRetVal] = -1;
+else 
+	
+	//print word; 
+	multipush(R0,R1,R2,R3,R4,R5);
+	alias functionNumber R1; 
+	alias currentPID R2;
+	alias word R3;
+	word = [[PTBR + 2 * ((userSP - 3) / 512)] * 512 + ((userSP - 3) % 512)];
+	functionNumber=3;
+	currentPID=[SYSTEM_STATUS_TABLE+1];
+	//breakpoint;
+	call MOD_4;//device manager module
+	//breakpoint;
+	//multipop (R0);
+	multipop(R0,R1,R2,R3,R4,R5);
+	
+	alias physicalAddrRetVal R6;
+	physicalAddrRetVal = ([PTBR + 2 * (userSP - 1)/ 512] * 512) + ((userSP - 1) % 512);
+	[physicalAddrRetVal] = 0;
+endif;
+
+
+//Outside the else block, set back the value of SP to point to top of user stack. 
+ SP = userSP;
+
+
+
+//Reset the MODE FLAG field in the process table to 0. Value 0 indicates that process is running in user mode. 
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+
+
+//Pass control back to the user program using the ireturn statement. 
+
+ireturn;

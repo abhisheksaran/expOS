@@ -6,7 +6,7 @@ if(funcNum==2) then
 	multipush(R1,R2,R3,R4);
 	R1=3;
 	R2=currentPID;
-	call MOD_0;
+	call MOD_0;//call acquire disk in resource manager module
 	multipop(R1,R2,R3,R4);
 
 	alias pageNumber R3;
@@ -17,7 +17,7 @@ if(funcNum==2) then
 	[DISK_STATUS_TABLE+2]=pageNumber;
 	[DISK_STATUS_TABLE+3]=blockNumber;	
 	[DISK_STATUS_TABLE+4]=currentPID;
-	
+	//breakpoint;
 	load(pageNumber,blockNumber);
 	[PROCESS_TABLE+currentPID*16+4]=WAIT_DISK;
 	multipush(R1,R2,R3,R4);		
